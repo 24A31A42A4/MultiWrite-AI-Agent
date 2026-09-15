@@ -33,7 +33,6 @@ generated_images/
 *.md
 !README.md
 !agentwriter-ai-requirements.md
-agent_writer.png
 
 # IDEs and OS
 .vscode/

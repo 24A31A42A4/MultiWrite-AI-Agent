@@ -70,6 +70,8 @@ The system workflow follows a clear pipeline:
    gemini_api_key_2="your_gemini_key_2"
    gemini_api_key_3="your_gemini_key_3"
    gemini_api_key_4="your_gemini_key_4"
+   gemini_api_key_5="your_gemini_key_5"
+   gemini_api_key_6="your_gemini_key_6"
    ```
 
 ## 🚀 Usage (Observability)

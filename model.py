@@ -1,7 +1,10 @@
 import os
+from io import BytesIO
+from types import SimpleNamespace
 
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
+from huggingface_hub import InferenceClient
 
 # Load API keys from .env file.
 load_dotenv()
@@ -36,23 +39,41 @@ for model_name in text_model_names:
 # Chain all text models together: tries primary model with key1 -> key2 -> fallback model with key1 -> key2
 model = text_models[0].with_fallbacks(text_models[1:]) if text_models else None
 
-# Image models (Gemini) for generating blog illustrations.
-# Supports multiple API keys and fallback models to handle quota limits.
-gemini_api_keys = [
-    key for key in [
-        os.getenv("gemini_api_key"),
-        os.getenv("gemini_api_key_2"),
-        os.getenv("gemini_api_key_3"),
-        os.getenv("gemini_api_key_4"),
-    ] if key
+# Hugging Face image-generation routes.
+hf_api_keys = [
+    key
+    for key in [
+        os.getenv("hf_token")
+        or os.getenv("HF_TOKEN")
+        or os.getenv("HUGGINGFACEHUB_API_TOKEN"),
+        *(
+            os.getenv(f"hf_token_{index}")
+            or os.getenv(f"HF_TOKEN_{index}")
+            or os.getenv(f"HUGGINGFACEHUB_API_TOKEN_{index}")
+            for index in range(2, 61)
+        ),
+    ]
+    if key
 ]
 
-# Image models to try in order: fast/cheap first, high-quality last.
 image_model_names = [
-    "gemini-3.1-flash-lite-image",
-    "gemini-3.1-flash-image",
-    "gemini-3-pro-image",
+    os.getenv("HF_IMAGE_MODEL", "Qwen/Qwen-Image")
 ]
+
+
+class HuggingFaceImageModel:
+    """Adapt Hugging Face text-to-image inference to LangChain's invoke API."""
+
+    def __init__(self, model_name: str, api_key: str):
+        self.model_name = model_name
+        self.client = InferenceClient(api_key=api_key)
+
+    def invoke(self, messages):
+        prompt = messages[-1].content if messages else "Generate a blog illustration."
+        image = self.client.text_to_image(prompt=prompt, model=self.model_name)
+        buffer = BytesIO()
+        image.save(buffer, format="PNG")
+        return SimpleNamespace(content=buffer.getvalue())
 
 # Build image models grouped by model name.
 # Structure: list of (model_name, [model_with_key1, model_with_key2, ...])
@@ -60,20 +81,13 @@ image_model_names = [
 image_model_groups = []
 for model_name in image_model_names:
     key_variants = []
-    for key in gemini_api_keys:
-        key_variants.append(
-            init_chat_model(
-                model=model_name,
-                model_provider="google_genai",
-                temperature=0,
-                google_api_key=key,
-            )
-        )
+    for key in hf_api_keys:
+        key_variants.append(HuggingFaceImageModel(model_name, key))
     if key_variants:
         image_model_groups.append((model_name, key_variants))
 
 # Total number of API keys configured.
-num_image_keys = len(gemini_api_keys)
+num_image_keys = len(hf_api_keys)
 
 # Primary image model (None if no keys are configured).
 image_model = image_model_groups[0][1][0] if image_model_groups else None

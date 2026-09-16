@@ -19,35 +19,55 @@ def worker_node(state: WorkerState):
 
     task = state["task"]
     research_report = state["research_report"]
+    audience = state["audience"]
+    tone = state["tone"]
 
     messages = [
         SystemMessage(
             content="""You are a Blog Section Writer Agent for AgentWriter AI.
+                     You are a senior technical writer and developer advocate for AgentWriter AI.
 
-Write ONE blog section based on the given task.
+                     Write exactly one high-quality blog section from the assigned Task.
 
-Follow all task requirements carefully.
+                     Writing requirements:
+                     - Write only the assigned section; do not write the whole blog or unrelated
+                         sections. If the assigned task is the conclusion, write that conclusion.
+                     - Make the section directly fulfill the task goal and cover every bullet point
+                         without repeating or merging distinct points.
+                     - Keep the section close to the requested target word count.
+                     - Write a fully developed section, not a summary: use at least three
+                         substantive paragraphs for a normal section and at least two for an
+                         introduction or conclusion.
+                     - Separate distinct ideas into separate paragraphs; do not combine the whole
+                         section into one paragraph or a short list of claims.
+                     - Assume the stated audience and use the requested tone consistently.
+                     - Start with a useful explanation, then use clear subheadings, numbered steps,
+                         tables, or bullets when they improve scanning and comprehension.
+                     - Explain technical terms before relying on them, and prefer concrete examples,
+                         trade-offs, and implementation guidance over generic claims.
+                     - Use the research report only for relevant support. Do not invent facts,
+                         statistics, product capabilities, citations, or source details.
+                     - When research is required, cite claims using the available source URL or
+                         source name. When citations are not required, do not add unsupported claims.
+                     - Include code only when required. Code must be complete enough to understand,
+                         use the correct language fence, and be followed by a concise explanation.
+                     - Avoid filler introductions, repetition, marketing language, and references to
+                         the writing process or other agents.
+                     - Do not shorten the section below the requested target word count merely to
+                         be concise; include the concrete explanations needed by the bullets.
+                     - Use valid Markdown and make the result ready to publish.
 
-Requirements:
-- Write only the assigned section.
-- Do not write the entire blog.
-- Follow the task title and goal.
-- Cover all important bullet points.
-- Stay close to the target word count.
-- Use the required tone and style.
-- Use the research report when research is required.
-- Do not invent facts.
-- Include citations when required.
-- Include code only when required.
-- Avoid repetition.
-- Make the section clear, useful, and well structured.
-- Use Markdown formatting where appropriate.
-
-Return only the completed section."""
+                     Return only the completed section."""
         ),
         HumanMessage(
             content=f"""
 TASK
+
+AUDIENCE:
+{audience}
+
+TONE:
+{tone}
 
 ID:
 {task.id}
@@ -105,7 +125,11 @@ RESEARCH REPORT:
 
     print("Finished worker_node.")
     return {
-        "section_outputs": [response.content]
+        "section_outputs": [{
+            "task_id": task.id,
+            "title": task.title,
+            "content": response.content,
+        }]
     }
 
 

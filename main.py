@@ -7,7 +7,6 @@ from research import Research_node
 from orchestrator import planner_agent
 from reducer import reducer_node
 from worker import worker_node
-from image_agent import image_node
 from blogagent import blog_agent
 import os
 # Create the main agent writer graph.
@@ -19,7 +18,6 @@ AgentWriter.add_node("Research_agent", Research_node)
 AgentWriter.add_node("Orchestrator_agent", planner_agent)
 AgentWriter.add_node("reducer_agent", reducer_node)
 AgentWriter.add_node("worker_agent", worker_node)
-AgentWriter.add_node("image_agent", image_node)
 AgentWriter.add_node("Blog_agent",blog_agent)
 
 
@@ -58,30 +56,13 @@ AgentWriter.add_conditional_edges(
 AgentWriter.add_edge("Research_agent", "Orchestrator_agent")
 
 
-# Fan out tasks to worker and image agents in parallel.
+# Fan out tasks to workers in parallel.
 def fanout_tasks(state: AgentWriterState):
     print("\nRunning fanout_tasks...")
     sends = []
     worker_count = len(state["plan"].tasks)
-    image_count = sum(
-        1 for task in state["plan"].tasks if getattr(task, "requires_image", False)
-    )
-    print(
-        f"Planning {worker_count} blog sections and {image_count} image tasks "
-        f"({worker_count + image_count} total dispatches)."
-    )
+    print(f"Planning {worker_count} blog sections (no image tasks).")
     for task in state["plan"].tasks:
-        # Send image tasks to the image agent if needed.
-        if getattr(task, "requires_image", False):
-            sends.append(
-                Send(
-                    "image_agent",
-                    {
-                        "task": task,
-                        "image_prompt": f"Create a blog illustration for: {task.title}",
-                    },
-                )
-            )
         # Send every task to a worker agent to write the section.
         sends.append(
             Send(
@@ -96,7 +77,7 @@ def fanout_tasks(state: AgentWriterState):
         )
     print(
         f"✅ END fanout_tasks: {worker_count} worker sections, "
-        f"{image_count} image tasks, {len(sends)} total dispatches"
+        f"{len(sends)} total dispatches"
     )
     return sends
 
@@ -105,12 +86,11 @@ def fanout_tasks(state: AgentWriterState):
 AgentWriter.add_conditional_edges(
     "Orchestrator_agent",
     fanout_tasks,
-    ["worker_agent", "image_agent"],
+    ["worker_agent"],
 )
 
 # After all workers and image agents finish, reduce into the final blog.
 AgentWriter.add_edge("worker_agent", "reducer_agent")
-AgentWriter.add_edge("image_agent", "reducer_agent")
 AgentWriter.add_edge("reducer_agent", "save_blog")
 AgentWriter.add_edge("save_blog", "Blog_agent")
 AgentWriter.add_edge("Blog_agent", END)

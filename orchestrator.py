@@ -42,14 +42,13 @@ The tasks should be a list of Task objects and each task should include:
 - requires_research
 - requires_citations
 - requires_code
-- requires_image (set to true for sections that would benefit from a visual illustration)
+- requires_image (always set to false)
 
 Hard requirements:
 - Create 5 to 9 tasks suitable for the topic and audience.
 - Include an introduction task first and a conclusion task last; use the
     remaining tasks for the main topic sections.
-- Mark one or two main sections as requires_image=true when a diagram,
-    architecture view, workflow, or comparison visual would improve the article.
+- Do not plan image generation or image assets for any section.
 - The goal must be exactly one sentence.
 - Each task must contain 3 to 6 concrete, specific, non-overlapping bullets.
 - Set target_words between 120 and 550 for every task.
@@ -68,6 +67,14 @@ Research Report:
 
     # Ask the LLM to generate the blog plan.
     response = structured_llm.invoke(messages)
+    response = response.model_copy(
+        update={
+            "tasks": [
+                task.model_copy(update={"requires_image": False})
+                for task in response.tasks
+            ]
+        }
+    )
     print("Finished planner_agent.")
     return {"plan": response}
 

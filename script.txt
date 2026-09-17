@@ -1,0 +1,69 @@
+Hi everyone!
+
+I want to share my recent project called AgentWriter AI.
+
+AgentWriter AI is a multi-agent workflow that can generate a complete blog or article from a single topic.
+
+The interesting part of this project is that instead of using one agent to do everything, I designed multiple specialized agents. Each agent has a different responsibility, and together they complete the task.
+
+Let me explain how my architecture works.
+
+The first agent is the Router Agent.
+
+When the user provides a topic or query, the Router Agent first understands the topic and decides whether external research is required.
+
+If research is required, it generates multiple focused search queries and sends them to the Research Agent.
+
+The second agent is the Research Agent.
+
+It takes those queries and uses Tavily Search to collect relevant information from the web.
+
+The research results are then processed into useful research information that can be passed to the next agent.
+
+The third agent is the Orchestrator Agent.
+
+This is basically the planning part of my workflow.
+
+It takes the user's topic and the research information and creates a structured plan for the article.
+
+It decides things like:
+
+What sections the article should have
+What each section should explain
+The target word count
+The tone of the article
+Other constraints
+Whether a section needs research, citations, or code
+
+Once the plan is created, it is divided into smaller tasks.
+
+Then come the Worker Agents.
+
+Each worker is responsible for writing one specific section of the article.
+
+Instead of executing them one after another, I use LangGraph's Send mechanism to run the workers in parallel.
+
+So, for example, if the article has five sections, five workers can work on those sections independently.
+
+After that, the Reducer Agent takes over.
+
+It collects the outputs from all the workers and combines them into one complete, structured article.
+
+It also makes sure that the sections are properly connected and that the final article is consistent.
+
+And finally, I have another stage where the completed blog can be passed to a publishing agent in dev platform, which can use the required tools to publish or submit the article to the target platform.
+
+So the overall workflow looks like this:
+
+User Topic → Router → Research → Orchestrator → Parallel Workers → Reducer → Publishing
+
+For building this system, I used LangGraph to design and orchestrate the workflow, and LangChain for the LLM and other AI components.
+Okay, now let's go into my codebase and see how I implemented this architecture.
+
+Here is my project structure.
+
+I have separated the project into different files, where each file is responsible for a particular part of the workflow.
+
+Let's start with the state.
+
+The main thing I wanted to learn from this project was not just how to generate a blog, but how multiple AI agents can communicate, share state, divide responsibilities, and work together to complete one larger task.
